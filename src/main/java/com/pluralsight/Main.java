@@ -1,40 +1,58 @@
 package com.pluralsight;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 
 public class Main {
-    public static void main(String[] args) throws ClassNotFoundException, SQLException {
-        // load the MySQL Driver
-        Class.forName("com.mysql.cj.jdbc.Driver");
 
+    public static void main(String[] args) {
 
-        // 1. open a connection to the database
-        // use the database URL to point to the correct database
-        Connection connection;
-        connection = DriverManager.getConnection(
-                "jdbc:mysql://localhost:3306/northwind",
-                "root",
-                "P@ssw0rd");
+        // Read environment variables (HIDDEN, not in code)
+        String url = System.getenv("DB_URL");
+        String user = System.getenv("DB_USER");
+        String password = System.getenv("DB_PASS");
 
-        // create statement
-        // the statement is tied to the open connection
-        Statement statement = connection.createStatement();
-
-        // define your query
-        String query = "SELECT ProductName FROM products";
-
-        // 2. Execute your query
-        ResultSet results = statement.executeQuery(query);
-
-        // process the results
-        while (results.next()) {
-            String productName = results.getString("ProductName");
-            System.out.println(productName);
+        // Safety check
+        if (url == null || user == null || password == null) {
+            System.out.println("ERROR: Environment variables not set.");
+            System.out.println("You must set DB_URL, DB_USER, DB_PASS in Environment Variables.");
+            return;
         }
 
-        // 3. Close the connection
-        connection.close();
+        try {
 
+            // Connect to MySQL
+            Connection connection = DriverManager.getConnection(url, user, password);
+            System.out.println("Connected to Northwind!");
 
+            // SQL Query (Part 2 requirement)
+            String sql = "SELECT ProductID, ProductName, UnitPrice, UnitsInStock FROM products";
+
+            PreparedStatement stmt = connection.prepareStatement(sql);
+            ResultSet rs = stmt.executeQuery();
+
+            // Header for table format:
+            System.out.printf("%-5s %-30s %-10s %-10s%n", "Id", "Name", "Price", "Stock");
+            System.out.println("--------------------------------------------------------------");
+
+            // Loop through all products
+            while (rs.next()) {
+                int id = rs.getInt("ProductID");
+                String name = rs.getString("ProductName");
+                double price = rs.getDouble("UnitPrice");
+                int stock = rs.getInt("UnitsInStock");
+
+                System.out.printf("%-5d %-30s %-10.2f %-10d%n", id, name, price, stock);
+            }
+
+            rs.close();
+            stmt.close();
+            connection.close();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
